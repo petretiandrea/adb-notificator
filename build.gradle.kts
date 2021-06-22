@@ -1,16 +1,18 @@
 import io.gitlab.arturbosch.detekt.Detekt
 import org.jetbrains.changelog.markdownToHTML
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.annotations.*
+import org.jetbrains.kotlin.ir.backend.js.compile
 
 fun properties(key: String) = project.findProperty(key).toString()
-
 plugins {
     // Java support
     id("java")
     // Kotlin support
     id("org.jetbrains.kotlin.jvm") version "1.5.10"
     // gradle-intellij-plugin - read more: https://github.com/JetBrains/gradle-intellij-plugin
-    id("org.jetbrains.intellij") version "1.0"
+    id("io.github.petretiandrea.android-studio-deps")
+    id("org.jetbrains.intellij")
     // gradle-changelog-plugin - read more: https://github.com/JetBrains/gradle-changelog-plugin
     id("org.jetbrains.changelog") version "1.1.2"
     // detekt linter - read more: https://detekt.github.io/detekt/gradle.html
@@ -22,25 +24,46 @@ plugins {
 group = properties("pluginGroup")
 version = properties("pluginVersion")
 
+val ktVersion = "1.3.7"
+
 // Configure project's dependencies
 repositories {
     mavenCentral()
 }
-dependencies {
-    detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.17.1")
+
+fun haveStudioCompile(): Boolean = hasProperty("StudioCompilePath")
+
+fun androidStudioSource(): String = extra.get("androidStudioSource") as String
+
+androidstudio {
+    androidStudioVersion.set("2020.3.1.17")
 }
+
+
+println(extra.get("androidStudioSource"))
 
 // Configure gradle-intellij-plugin plugin.
 // Read more: https://github.com/JetBrains/gradle-intellij-plugin
 intellij {
     pluginName.set(properties("pluginName"))
-    version.set(properties("platformVersion"))
-    type.set(properties("platformType"))
-    downloadSources.set(properties("platformDownloadSources").toBoolean())
-    updateSinceUntilBuild.set(true)
 
+    type.set(properties("platformType"))
+    downloadSources.set(false)
+    updateSinceUntilBuild.set(false)
+
+    localPath.set(extra.get("androidStudioSource") as String)
     // Plugin Dependencies. Uses `platformPlugins` property from the gradle.properties file.
     plugins.set(properties("platformPlugins").split(',').map(String::trim).filter(String::isNotEmpty))
+}
+
+dependencies {
+    implementation(kotlin("stdlib-jdk8"))
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:$ktVersion")
+
+    compileOnly(fileTree("${androidStudioSource()}/plugins/android/lib") { include("*.jar") })
+    compileOnly(fileTree("${androidStudioSource()}/lib") { include("*.jar") } )
+
+    detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.17.1")
 }
 
 // Configure gradle-changelog-plugin plugin.
@@ -71,11 +94,18 @@ tasks {
     }
     withType<KotlinCompile> {
         kotlinOptions.jvmTarget = "1.8"
+        kotlinOptions.freeCompilerArgs = listOf(
+            "-Xuse-experimental=kotlinx.coroutines.ExperimentalCoroutinesApi"
+        )
     }
 
     withType<Detekt> {
         jvmTarget = "1.8"
     }
+
+    /*withType<org.jetbrains.intellij.tasks.RunIdeTask> {
+        ideDir.set(file(properties("AndroidStudioPath")))
+    }*/
 
     patchPluginXml {
         version.set(properties("pluginVersion"))

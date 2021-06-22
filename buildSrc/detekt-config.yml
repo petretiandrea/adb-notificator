@@ -6,8 +6,12 @@ formatting:
     continuationIndentSize: 8
   ParameterListWrapping:
     indentSize: 8
+  NoWildcardImports:
+    active: false
 
 style:
+  ForbiddenComment:
+    active: false
   WildcardImport:
     active: true
     excludes: ['**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/jsTest/**', '**/iosTest/**']
