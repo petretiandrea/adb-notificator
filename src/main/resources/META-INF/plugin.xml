@@ -1,19 +1,20 @@
 <idea-plugin>
-    <id>org.jetbrains.plugins.template</id>
+    <id>io.github.notificator</id>
     <name>Template</name>
     <vendor>JetBrains</vendor>
 
     <!-- Product and plugin compatibility requirements -->
     <!-- https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
+    <depends>org.jetbrains.android</depends>
+    <depends>com.intellij.modules.lang</depends>
+    <depends>com.intellij.modules.androidstudio</depends>
     <depends>com.intellij.modules.platform</depends>
 
-    <extensions defaultExtensionNs="com.intellij">
-        <applicationService serviceImplementation="org.jetbrains.plugins.template.services.MyApplicationService"/>
-        <projectService serviceImplementation="org.jetbrains.plugins.template.services.MyProjectService"/>
-    </extensions>
 
-    <applicationListeners>
-        <listener class="org.jetbrains.plugins.template.listeners.MyProjectManagerListener"
-                  topic="com.intellij.openapi.project.ProjectManagerListener"/>
-    </applicationListeners>
+    <extensions defaultExtensionNs="com.intellij">
+        <defaultProjectTypeProvider type="Android"/>
+        <toolWindow id="adb-notificator"
+                    factoryClass="io.github.notificator.NotificatorToolWindowFactory"
+                    secondary="true" icon="AllIcons.General.Modified" anchor="right"/>
+    </extensions>
 </idea-plugin>

@@ -6,13 +6,13 @@ plugins {
 
 repositories {
     mavenCentral()
-    maven {
+    /*maven {
         url = uri("https://plugins.gradle.org/m2/")
-    }
+    }*/
 }
 
 dependencies {
-    implementation("org.jetbrains.intellij.plugins:gradle-intellij-plugin:1.0")
+    //implementation("org.jetbrains.intellij.plugins:gradle-intellij-plugin:1.0")
     implementation("de.undercouch:gradle-download-task:4.1.1")
     detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.17.1")
 }

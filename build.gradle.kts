@@ -1,11 +1,9 @@
 import io.gitlab.arturbosch.detekt.Detekt
 import org.jetbrains.changelog.markdownToHTML
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import org.jetbrains.annotations.*
-import org.jetbrains.intellij.intellij
-import org.jetbrains.kotlin.ir.backend.js.compile
 
 fun properties(key: String) = project.findProperty(key).toString()
+
 plugins {
     // Java support
     id("java")
@@ -20,51 +18,52 @@ plugins {
     // ktlint linter - read more: https://github.com/JLLeitschuh/ktlint-gradle
     id("org.jlleitschuh.gradle.ktlint") version "10.0.0"
 
-
-    //id("io.github.petretiandrea.android-studio-deps")
+    id("io.github.petretiandrea.android-studio-deps")
 }
 
 group = properties("pluginGroup")
 version = properties("pluginVersion")
 
 val ktVersion = "1.3.7"
+val androidStudioPath = extra.get("androidStudioSource") as String
 
 // Configure project's dependencies
 repositories {
     mavenCentral()
+    maven {
+        url = uri("https://www.jetbrains.com/intellij-repository/releases")
+    }
 }
 
-fun haveStudioCompile(): Boolean = hasProperty("StudioCompilePath")
-
-fun androidStudioSource(): String = extra.get("androidStudioSource") as String
-
-/*androidstudio {
-    androidStudioVersion.set("2020.3.1.17")
-}*/
-
-
-println(extra.get("androidStudioSource"))
+androidstudio {
+    androidStudioVersion.set("202.7351085")
+}
 
 // Configure gradle-intellij-plugin plugin.
 // Read more: https://github.com/JetBrains/gradle-intellij-plugin
 intellij {
     pluginName.set(properties("pluginName"))
-    version.set(properties("platformVersion"))
+
+    //version.set(properties("platformVersion"))
     type.set(properties("platformType"))
     downloadSources.set(false)
     updateSinceUntilBuild.set(false)
 
-    localPath.set(extra.get("androidStudioSource") as String)
+    if(hasProperty("CI")) {
+        localPath.set(androidStudioPath)
+    } else {
+        localPath.set(properties("androidStudioLocalPath"))
+    }
     // Plugin Dependencies. Uses `platformPlugins` property from the gradle.properties file.
-    //plugins.set(properties("platformPlugins").split(',').map(String::trim).filter(String::isNotEmpty))
+    plugins.set(properties("platformPlugins").split(',').map(String::trim).filter(String::isNotEmpty))
 }
 
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:$ktVersion")
 
-    /*compileOnly(fileTree("${androidStudioSource()}/plugins/android/lib") { include("*.jar") })
-    compileOnly(fileTree("${androidStudioSource()}/lib") { include("*.jar") } )*/
+    compileOnly(fileTree("${androidStudioPath}/plugins/android/lib") { include("*.jar") })
+    compileOnly(fileTree("${androidStudioPath}/lib") { include("*.jar") } )
 
     detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.17.1")
 }

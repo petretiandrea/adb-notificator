@@ -25,10 +25,11 @@ open class DownloadAndroidStudioSourceTask
         const val TARGET_FILE = "android-studio.zip"
     }
 
+    // https://redirector.gvt1.com/edgedl/android/studio/ide-zips/4.2.1.0/android-studio-ide-202.7351085-windows.zip
+
     @TaskAction
     fun downloadStudioSource() {
-        println("oooo")
-        if (!extension.androidStudioVersion.getOrElse("").isNullOrEmpty()) {
+        if (extension.androidStudioVersion.getOrElse("").isNotEmpty()) {
             val targetFilename = File(project.buildDir, TARGET_FILE)
             val closureConfig = closureOf<DownloadAction> {
                 src(buildDownloadUrl(extension.androidStudioVersion.get()))
@@ -41,11 +42,11 @@ open class DownloadAndroidStudioSourceTask
     }
 
     private fun buildDownloadUrl(version: String): String {
-        return "${URL}$version/${buildAndroidStudioFilename(version)}"
+        return "${URL}4.2.1.0/${buildAndroidStudioFilename(version)}"
     }
 
     private fun buildAndroidStudioFilename(version: String): String {
-        return "android-studio-$version-${osVariant()}.zip"
+        return "android-studio-ide-$version-${osVariant()}.zip"
     }
 
     private fun osVariant(): String {
