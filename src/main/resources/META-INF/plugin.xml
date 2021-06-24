@@ -1,7 +1,7 @@
 <idea-plugin>
-    <id>io.github.notificator</id>
-    <name>Template</name>
-    <vendor>JetBrains</vendor>
+    <id>com.github.petretiandrea.adbnotificator</id>
+    <name>adb-notificator</name>
+    <vendor>petretiandrea</vendor>
 
     <!-- Product and plugin compatibility requirements -->
     <!-- https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
