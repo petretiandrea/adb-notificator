@@ -10,11 +10,11 @@ class AdbNotificatorViewModel(val project: Project, private val adbController: A
 
     private var availableDevicesFlow = MutableStateFlow<List<Adb.Device>>(listOf())
     private var attacheDeviceFlow = MutableStateFlow<AttachResult>(NoAttachedDevice)
-
+    private val currentPayloadFlow = MutableStateFlow<Map<String, String>>(mapOf())
 
     val availableDevices: Flow<List<Adb.Device>> = adbController.availableDevices.map { it.map { Adb.Device.fromDebugDevice(it) } }
     val attachedDevice: Flow<AttachResult> = attacheDeviceFlow
-
+    val currentPayload: Flow<Map<String, String>> = currentPayloadFlow
 
     init {
 

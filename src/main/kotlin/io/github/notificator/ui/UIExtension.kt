@@ -10,7 +10,6 @@ import kotlin.reflect.KMutableProperty0
 
 object UIExtension {
 
-
     fun <T> CellBuilder<ComboBox<T>>.observe(changeSelection: (T?) -> Unit) : CellBuilder<ComboBox<T>> = this.apply {
         component.addActionListener { changeSelection(component.model.selectedItem as? T) }
     }
