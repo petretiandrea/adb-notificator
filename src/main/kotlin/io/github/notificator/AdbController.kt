@@ -3,80 +3,79 @@ package io.github.notificator
 import com.android.ddmlib.AndroidDebugBridge
 import com.android.ddmlib.IDevice
 import com.intellij.openapi.project.Project
-import kotlinx.coroutines.channels.ConflatedBroadcastChannel
-import kotlinx.coroutines.channels.sendBlocking
+import io.github.notificator.model.DebugProcess
+import io.github.notificator.model.Device
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.future.await
+import kotlinx.coroutines.withContext
 import org.jetbrains.android.sdk.AndroidSdkUtils
-import org.jetbrains.annotations.NotNull
+import java.io.File
 
-data class DebugProcess(val pid: Int, val packageName: String?, val clientDescription: String?) {
-    fun clientKey() : String {
-        return "$packageName$clientDescription"
+class AdbController(private val adbBridge: AndroidDebugBridge?,
+                    private val adbPath: File?) {
+
+    companion object {
+        fun fromProject(project: Project): AdbController {
+            return AdbController(AndroidSdkUtils.getDebugBridge(project), AndroidSdkUtils.getAdb(project))
+        }
     }
-}
 
-
-interface AttachResult
-data class AttachedDevice(val device: IDevice, val currentProcess: DebugProcess?, val process: List<DebugProcess>) : AttachResult
-object NoAttachedDevice : AttachResult
-
-class AdbController(project: Project) {
-
-    private val availableDeviceFlow: MutableStateFlow<List<IDevice>> =
-        MutableStateFlow(listOf())
-
-    val availableDevices: Flow<List<IDevice>> = availableDeviceFlow
+    private val _availableDevices: MutableStateFlow<List<Device>> = MutableStateFlow(listOf())
+    val availableDevices: Flow<List<Device>> = _availableDevices
 
     private val deviceChangeCallback = object : AndroidDebugBridge.IDeviceChangeListener {
         override fun deviceConnected(device: IDevice?) {
             device?.let {
-                availableDeviceFlow.value = AndroidDebugBridge.getBridge()?.devices.orEmpty().toList()
+                _availableDevices.value = adbBridge?.devices?.map(Device::fromDebugDevice).orEmpty().toList()
             }
         }
 
         override fun deviceDisconnected(device: IDevice?) {
             device?.let {
-                availableDeviceFlow.value = AndroidDebugBridge.getBridge()?.devices.orEmpty().toList()
+                _availableDevices.value = adbBridge?.devices?.map(Device::fromDebugDevice).orEmpty().toList()
             }
         }
 
         override fun deviceChanged(device: IDevice?, changeMask: Int) {
+            println("Device changed ${device?.state}")
             device?.let {
-                availableDeviceFlow.value = AndroidDebugBridge.getBridge()?.devices.orEmpty().toList()
+                val update = adbBridge?.devices?.map(Device::fromDebugDevice).orEmpty().toList()
+                println("Equals ${update == _availableDevices.value}")
+                _availableDevices.value = update
             }
         }
     }
-
     private val debugBridgeChangeCallback = AndroidDebugBridge.IDebugBridgeChangeListener { bridge ->
-        val devices = bridge?.devices.orEmpty()
-        availableDeviceFlow.value = devices.toList()
+        _availableDevices.value = bridge?.devices?.map(Device::fromDebugDevice).orEmpty().toList()
     }
 
     init {
         AndroidDebugBridge.addDeviceChangeListener(deviceChangeCallback)
         AndroidDebugBridge.addDebugBridgeChangeListener(debugBridgeChangeCallback)
 
-        val bridge: AndroidDebugBridge? = AndroidSdkUtils.getDebugBridge(project)
-        println("initDeviceList bridge0 ${bridge?.isConnected}")
+        println("initDeviceList bridge0 ${adbBridge?.isConnected}")
     }
 
-    fun attachDevice(serial: String): AttachResult {
-        val device = availableDeviceFlow.value.find { it.serialNumber == serial }
-        val debugProcessList =  device?.clients
-            ?.map { it.clientData }
-            ?.map { DebugProcess(it.pid, it?.packageName, it?.clientDescription) }
-            .orEmpty()
-        val defaultSelection: DebugProcess? = debugProcessList.firstOrNull()
-
-        return if (device != null) AttachedDevice(device, defaultSelection, debugProcessList) else NoAttachedDevice
-    }
-
-    fun selectDevice(device: IDevice?) {
-        device?.let {
-
+    suspend fun processesOfDevice(deviceSerial: String) : List<DebugProcess> {
+        val device = adbBridge?.devices?.find { it.serialNumber == deviceSerial }
+        return withContext(Dispatchers.IO) {
+            device?.clients
+                ?.map { it.clientData }
+                ?.map { DebugProcess(it.pid, it?.packageName, it?.clientDescription) }
+                .orEmpty()
         }
+    }
+
+    suspend fun enableDeviceRoot(deviceSerial: String) : Boolean {
+        val device = adbBridge?.devices?.find { it.serialNumber == deviceSerial }
+        if (device?.isRoot != true && !adbPath?.absolutePath.isNullOrEmpty()) {
+            withContext(Dispatchers.IO) {
+                kotlin.runCatching { Runtime.getRuntime().exec("$adbPath -s $deviceSerial root").onExit().await() }
+            }
+        }
+        return device?.isRoot ?: false
     }
 
     fun sendNotification(deviceSerial: String, processPid: Int, content: Map<String, String>) {

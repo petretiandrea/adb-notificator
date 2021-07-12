@@ -61,11 +61,15 @@ intellij {
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:$ktVersion")
+    implementation("org.jetbrains.kotlin:kotlin-reflect:1.3.70")
 
     compileOnly(fileTree("${androidStudioPath}/plugins/android/lib") { include("*.jar") })
     compileOnly(fileTree("${androidStudioPath}/lib") { include("*.jar") } )
 
     detektPlugins("io.gitlab.arturbosch.detekt:detekt-formatting:1.17.1")
+
+    testImplementation(kotlin("test"))
+    testImplementation( "org.mockito.kotlin:mockito-kotlin:3.2.0")
 }
 
 // Configure gradle-changelog-plugin plugin.
@@ -89,6 +93,10 @@ detekt {
 }
 
 tasks {
+    test {
+        useJUnitPlatform()
+    }
+
     // Set the compatibility versions to 1.8
     withType<JavaCompile> {
         sourceCompatibility = "1.8"
